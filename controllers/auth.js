@@ -1,6 +1,7 @@
 const { validationResult } = require("express-validator");
 const User = require("../model/user");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 exports.signup = async (req, res, next) => {
   const errors = validationResult(req);
@@ -57,13 +58,26 @@ exports.login = async (req, res, next) => {
       throw error;
     }
     loadedUser = user;
-    const isEqual = await bcrypt.compare(password.toString(), user.password.toString());
+    const isEqual = await bcrypt.compare(
+      password.toString(),
+      user.password.toString()
+    );
     if (!isEqual) {
       const error = new Error("Wrong password!");
       error.statusCode = 401;
       throw error;
     }
-    return res.status(200).json({ message: "Login successful!" });
+    const token = jwt.sign(
+      {
+        email: user.email,
+        userId: user._id.toString(),
+      },
+      "somesupersecretsecret",
+      { expiresIn: "1h" }
+    );
+
+    return res.status(200).json({ message: "Login successful!", token, userId: loadedUser._id.toString() });
+
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
